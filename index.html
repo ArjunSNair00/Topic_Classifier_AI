@@ -277,10 +277,12 @@
     const filePreview = document.getElementById("file-preview");
     const fileNameEl = document.getElementById("file-name");
 
-    let currentMode = 'chatbot';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let currentMode = null;
     let classifierSessions = JSON.parse(localStorage.getItem('classifier_sessions')) || [];
     let chatbotSessions = JSON.parse(localStorage.getItem('chatbot_sessions')) || [];
-    let sessions = chatbotSessions;
+    let sessions = [];
     let activeSessionId = null;
     let attachedFileText = "";
     let currentAbortController = null;
@@ -442,9 +444,41 @@
           `;
         } else {
           const ui = getConfidenceUI(m.conf);
+          const isThinking = m.text === "Thinking..." || m.text === "Analyzing semantic patterns...";
+          
+          let contentHtml = "";
+          if (isThinking) {
+            contentHtml = `
+              <div class="flex flex-col gap-4">
+                <div class="thinking-wavy text-blue-400 font-bold text-sm tracking-widest">
+                  ${m.text.split('').map(char => char === ' ' ? '&nbsp;' : `<span>${char}</span>`).join('')}
+                </div>
+                <div class="flex items-center ml-3 mt-1">
+                  <div class="dot-flashing"></div>
+                </div>
+              </div>
+            `;
+          } else if (currentMode === 'classifier') {
+            contentHtml = `
+              <div class="flex items-baseline gap-2 flex-wrap">
+                <span class="text-sm text-gray-400">Topic Identified:</span>
+                <span class="text-2xl font-bold text-white tracking-tight">${m.text}</span>
+              </div>
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${ui.class}">
+                ${ui.text}
+              </div>
+            `;
+          } else {
+            contentHtml = `
+              <div class="prose prose-invert prose-sm max-w-none text-gray-200">
+                ${marked.parse(m.text)}
+              </div>
+            `;
+          }
+
           return `
-            <div class="flex flex-col items-start gap-3 animate-fadeIn">
-              <div class="bg-white/5 border border-white/5 p-6 msg-bot max-w-[90%] md:max-w-[80%] relative group shadow-2xl overflow-hidden">
+            <div class="flex flex-col items-start gap-3 animate-fadeIn relative group">
+              <div class="bg-white/5 border border-white/5 p-6 msg-bot max-w-[90%] md:max-w-[80%] relative group shadow-2xl overflow-hidden w-full">
                 <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                 <div class="flex items-center gap-3 mb-4">
                   <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
@@ -452,37 +486,18 @@
                   </div>
                   <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${currentMode === 'classifier' ? 'Neural Analysis Complete' : 'IntelliChat Engine'}</span>
                 </div>
-                <!-- Copy Button -->
-                <button onclick="copyToClipboard(this, \`${m.text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="absolute top-4 right-4 p-2 opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-all">
+                
+                ${!isThinking ? `
+                <button onclick="copyMessage(${idx}, event)" class="absolute top-4 right-4 p-2 opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-all">
                   <i data-lucide="copy" class="w-4 h-4"></i>
                 </button>
+                ` : ''}
 
                 <div class="space-y-4">
-                  ${m.text === "Thinking..." || m.text === "Analyzing semantic patterns..." ? `
-                    <div class="flex flex-col gap-4">
-                      <div class="thinking-wavy text-blue-400 font-bold text-sm tracking-widest">
-                        ${m.text.split('').map(char => char === ' ' ? '&nbsp;' : `<span>${char}</span>`).join('')}
-                      </div>
-                      <div class="flex items-center ml-3 mt-1">
-                        <div class="dot-flashing"></div>
-                      </div>
-                    </div>
-                  ` : (currentMode === 'classifier' ? `
-                  <div class="flex items-baseline gap-2 flex-wrap">
-                    <span class="text-sm text-gray-400">Topic Identified:</span>
-                    <span class="text-2xl font-bold text-white tracking-tight">${m.text}</span>
-                  </div>
-                  <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${ui.class}">
-                    ${ui.text}
-                  </div>
-                  ` : `
-                  <div class="prose prose-invert prose-sm max-w-none text-gray-200">
-                    ${marked.parse(m.text)}
-                  </div>
-                  `)}
+                  ${contentHtml}
                 </div>
               </div>
-              <span class="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-2">Generated by Classifier v2.0</span>
+              <span class="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-2">Generated by IntelliChat v3.0</span>
             </div>
           `;
         }
@@ -626,9 +641,17 @@
       filePreview.classList.add('hidden');
     }
 
-    function copyToClipboard(btn, text) {
+    function copyMessage(idx, e) {
+      const session = sessions.find(s => s.id === activeSessionId);
+      if (!session || !session.messages[idx]) return;
+      
+      const text = session.messages[idx].text;
       navigator.clipboard.writeText(text).then(() => {
+        // Find the button to show feedback
+        const btn = e.currentTarget;
         const icon = btn.querySelector('i');
+        if (!icon) return;
+        
         const originalIcon = icon.getAttribute('data-lucide');
         icon.setAttribute('data-lucide', 'check');
         btn.classList.add('text-green-500');
