@@ -53,6 +53,72 @@
 
     .msg-user { border-radius: 1.5rem 1.5rem 0.2rem 1.5rem; }
     .msg-bot { border-radius: 1.5rem 1.5rem 1.5rem 0.2rem; }
+
+    /* Wavy Animation */
+    @keyframes wavy {
+      0%, 40%, 100% { transform: translateY(0); }
+      20% { transform: translateY(-6px); }
+    }
+    .thinking-wavy {
+      display: flex;
+      gap: 1px;
+    }
+    .thinking-wavy span {
+      display: inline-block;
+      animation: wavy 1.4s ease-in-out infinite;
+    }
+    /* Dynamic Delays for the sine-like wave */
+    .thinking-wavy span:nth-child(1) { animation-delay: 0.1s; }
+    .thinking-wavy span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-wavy span:nth-child(3) { animation-delay: 0.3s; }
+    .thinking-wavy span:nth-child(4) { animation-delay: 0.4s; }
+    .thinking-wavy span:nth-child(5) { animation-delay: 0.5s; }
+    .thinking-wavy span:nth-child(6) { animation-delay: 0.6s; }
+    .thinking-wavy span:nth-child(7) { animation-delay: 0.7s; }
+    .thinking-wavy span:nth-child(8) { animation-delay: 0.8s; }
+    .thinking-wavy span:nth-child(1) { animation-delay: 0.1s; }
+
+    .dot-flashing {
+      position: relative;
+      width: 4px;
+      height: 4px;
+      border-radius: 5px;
+      background-color: #3b82f6;
+      color: #3b82f6;
+      animation: dot-flashing 1s infinite linear alternate;
+      animation-delay: 0.5s;
+    }
+    .dot-flashing::before, .dot-flashing::after {
+      content: "";
+      display: inline-block;
+      position: absolute;
+      top: 0;
+    }
+    .dot-flashing::before {
+      left: -8px;
+      width: 4px;
+      height: 4px;
+      border-radius: 5px;
+      background-color: #3b82f6;
+      color: #3b82f6;
+      animation: dot-flashing 1s infinite alternate;
+      animation-delay: 0s;
+    }
+    .dot-flashing::after {
+      left: 8px;
+      width: 4px;
+      height: 4px;
+      border-radius: 5px;
+      background-color: #3b82f6;
+      color: #3b82f6;
+      animation: dot-flashing 1s infinite alternate;
+      animation-delay: 1s;
+    }
+    @keyframes dot-flashing {
+      0% { background-color: #3b82f6; }
+      50%, 100% { background-color: rgba(59, 130, 246, 0.2); }
+    }
+
   </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -142,14 +208,7 @@
             </p>
           </div>
           <div id="empty-hints" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl w-full">
-            <button onclick="setInput('How to train a transformer model for NLP tasks?')" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-white/10 transition-all text-left group">
-              <p class="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">Technical Question</p>
-              <p class="text-xs text-gray-500 mt-1">"How to train a transformer model..."</p>
-            </button>
-            <button onclick="setInput('The economy is facing significant inflation pressure this quarter.')" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-white/10 transition-all text-left group">
-              <p class="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">Economic Analysis</p>
-              <p class="text-xs text-gray-500 mt-1">"The economy is facing significant..."</p>
-            </button>
+            <!-- Hints dynamically injected -->
           </div>
         </div>
         <!-- Messages will be injected here -->
@@ -251,7 +310,30 @@
         ? 'Paste your text below. Our neural classifier will categorize it into business, tech, or science topics with real-time confidence mapping.' 
         : 'Have a conversation with the ultra-smart Gemma 3 4B cloud model integrated via Ollama.';
         
-      document.getElementById('empty-hints').style.display = mode === 'classifier' ? 'grid' : 'none';
+      const hintsContainer = document.getElementById('empty-hints');
+      if (mode === 'classifier') {
+        hintsContainer.innerHTML = `
+          <button onclick="setInput('How to train a transformer model for NLP tasks?')" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-white/10 transition-all text-left group">
+            <p class="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">Technical Question</p>
+            <p class="text-xs text-gray-500 mt-1">"How to train a transformer model..."</p>
+          </button>
+          <button onclick="setInput('The economy is facing significant inflation pressure this quarter.')" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-white/10 transition-all text-left group">
+            <p class="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">Economic Analysis</p>
+            <p class="text-xs text-gray-500 mt-1">"The economy is facing significant..."</p>
+          </button>
+        `;
+      } else {
+        hintsContainer.innerHTML = `
+          <button onclick="setInput('Explain quantum computing like I am five.')" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all text-left group">
+            <p class="text-sm font-semibold text-white group-hover:text-purple-400 transition-colors">Simplify Concepts</p>
+            <p class="text-xs text-gray-500 mt-1">"Explain quantum computing..."</p>
+          </button>
+          <button onclick="setInput('Write a short sci-fi story about a world with no shadows.')" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all text-left group">
+            <p class="text-sm font-semibold text-white group-hover:text-purple-400 transition-colors">Creative Writing</p>
+            <p class="text-xs text-gray-500 mt-1">"Write a short sci-fi story..."</p>
+          </button>
+        `;
+      }
       
       if (sessions.length > 0) loadSession(sessions[0].id);
       else createNewChat();
@@ -339,7 +421,16 @@
                   <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${currentMode === 'classifier' ? 'Neural Analysis Complete' : 'Gemma 3:4b'}</span>
                 </div>
                 <div class="space-y-4">
-                  ${currentMode === 'classifier' ? `
+                  ${m.text === "Thinking..." || m.text === "Analyzing semantic patterns..." ? `
+                    <div class="flex flex-col gap-4">
+                      <div class="thinking-wavy text-blue-400 font-bold text-sm tracking-widest">
+                        ${m.text.split('').map(char => char === ' ' ? '&nbsp;' : `<span>${char}</span>`).join('')}
+                      </div>
+                      <div class="flex items-center ml-3 mt-1">
+                        <div class="dot-flashing"></div>
+                      </div>
+                    </div>
+                  ` : (currentMode === 'classifier' ? `
                   <div class="flex items-baseline gap-2 flex-wrap">
                     <span class="text-sm text-gray-400">Topic Identified:</span>
                     <span class="text-2xl font-bold text-white tracking-tight">${m.text}</span>
@@ -351,7 +442,7 @@
                   <div class="prose prose-invert prose-sm max-w-none text-gray-200">
                     ${marked.parse(m.text)}
                   </div>
-                  `}
+                  `)}
                 </div>
               </div>
               <span class="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-2">Generated by Classifier v2.0</span>
@@ -460,8 +551,7 @@
     }
 
     // Init
-    if (sessions.length > 0) loadSession(sessions[0].id);
-    else createNewChat();
+    setMode('classifier');
     
     sendBtn.disabled = true;
   </script>
