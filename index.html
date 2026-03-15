@@ -123,6 +123,16 @@
     .thinking-wavy span:nth-child(28) { animation-delay: 2.8s; }
     .thinking-wavy span:nth-child(29) { animation-delay: 2.9s; }
     .thinking-wavy span:nth-child(30) { animation-delay: 3.0s; }
+    .thinking-wavy span:nth-child(31) { animation-delay: 3.1s; }
+    .thinking-wavy span:nth-child(32) { animation-delay: 3.2s; }
+    .thinking-wavy span:nth-child(33) { animation-delay: 3.3s; }
+    .thinking-wavy span:nth-child(34) { animation-delay: 3.4s; }
+    .thinking-wavy span:nth-child(35) { animation-delay: 3.5s; }
+    .thinking-wavy span:nth-child(36) { animation-delay: 3.6s; }
+    .thinking-wavy span:nth-child(37) { animation-delay: 3.7s; }
+    .thinking-wavy span:nth-child(38) { animation-delay: 3.8s; }
+    .thinking-wavy span:nth-child(39) { animation-delay: 3.9s; }
+    .thinking-wavy span:nth-child(40) { animation-delay: 4.0s; }
 
     .dot-flashing {
       position: relative;
@@ -527,7 +537,7 @@
           `;
         } else {
           const ui = getConfidenceUI(m.conf);
-          const isThinking = m.text === "Thinking..." || m.text === "Analyzing semantic patterns...";
+          const isThinking = m.text.includes("...") || m.text === "Analyzing semantic patterns...";
           
           let contentHtml = "";
           if (isThinking) {
