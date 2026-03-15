@@ -4,6 +4,10 @@
     {
       "source": "/predict",
       "destination": "https://topic-classifier-ai.onrender.com/predict"
+    },
+    {
+      "source": "/chat",
+      "destination": "https://topic-classifier-ai.onrender.com/chat"
     }
   ]
 }

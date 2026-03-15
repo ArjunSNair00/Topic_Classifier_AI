@@ -7,6 +7,19 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
+
+# Setup Chat Client
+API_KEY = os.getenv("OPENAI_API_KEY")
+BASE_URL = os.getenv("OPENAI_BASE_URL", "https://ollama.com/v1")
+
+# Create the client conditionally to not break if keys are missing initially
+openai_client = None
+if API_KEY:
+    openai_client = OpenAI(base_url=BASE_URL, api_key=API_KEY)
 
 app = FastAPI(title="Topic Classifier API")
 
@@ -28,6 +41,13 @@ except Exception as e:
 
 class TextInput(BaseModel):
     text: str
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
 
 # Serve the HTML frontend
 @app.get("/", response_class=HTMLResponse)
@@ -76,5 +96,22 @@ async def predict_post(item: TextInput):
 async def predict_get(text: str = Query(..., description="The text to classify")):
     return do_prediction(text)
 
+# Chat endpoint using Ollama
+@app.post("/chat")
+async def chat_post(req: ChatRequest):
+    if not openai_client:
+        raise HTTPException(status_code=500, detail="Server Error: Chat AI model not configured (missing API keys).")
+    try:
+        response = openai_client.chat.completions.create(
+            model="gemma3:4b",
+            messages=[{"role": m.role, "content": m.content} for m in req.messages]
+        )
+        return {"response": response.choices[0].message.content}
+    except Exception as e:
+        error_details = traceback.format_exc()
+        print(f"Chat Error: {error_details}")
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
 if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Topic Classifier AI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -106,8 +107,15 @@
         <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-white/5 rounded-lg">
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
-        <span class="text-sm font-medium text-gray-400" id="current-title">New Analysis</span>
+        <span class="text-sm font-medium text-gray-400 hidden sm:block" id="current-title">New Analysis</span>
       </div>
+      
+      <!-- Mode Toggle -->
+      <div class="flex bg-black/40 p-1 rounded-xl border border-white/10 mx-2 shadow-inner">
+        <button id="mode-classifier-btn" onclick="setMode('classifier')" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 shadow-md text-white transition-all">Classifier</button>
+        <button id="mode-chatbot-btn" onclick="setMode('chatbot')" class="px-3 md:px-4 py-1.5 text-xs font-semibold rounded-lg text-gray-400 hover:text-white transition-all">Chatbot</button>
+      </div>
+
       <div class="flex items-center gap-2">
         <div class="px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full flex items-center gap-2">
           <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -128,12 +136,12 @@
             </div>
           </div>
           <div class="space-y-3">
-            <h1 class="text-4xl font-extrabold tracking-tight text-white lg:text-5xl">Analyze Anything.</h1>
-            <p class="text-gray-400 max-w-lg mx-auto text-lg leading-relaxed">
+            <h1 id="empty-title" class="text-4xl font-extrabold tracking-tight text-white lg:text-5xl">Analyze Anything.</h1>
+            <p id="empty-desc" class="text-gray-400 max-w-lg mx-auto text-lg leading-relaxed">
               Paste your text below. Our neural classifier will categorize it into business, tech, or science topics with real-time confidence mapping.
             </p>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl w-full">
+          <div id="empty-hints" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl w-full">
             <button onclick="setInput('How to train a transformer model for NLP tasks?')" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-white/10 transition-all text-left group">
               <p class="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">Technical Question</p>
               <p class="text-xs text-gray-500 mt-1">"How to train a transformer model..."</p>
@@ -182,11 +190,15 @@
     const sendBtn = document.getElementById("send-btn");
     const currentTitleEl = document.getElementById("current-title");
 
-    let sessions = JSON.parse(localStorage.getItem('classifier_sessions')) || [];
+    let currentMode = 'classifier';
+    let classifierSessions = JSON.parse(localStorage.getItem('classifier_sessions')) || [];
+    let chatbotSessions = JSON.parse(localStorage.getItem('chatbot_sessions')) || [];
+    let sessions = classifierSessions;
     let activeSessionId = null;
 
     // Use relative path exclusively so it relies on the served route.
     const apiUrl = "/predict";
+    const chatbotApiUrl = "/chat";
 
     // Dynamic styles
     function getConfidenceUI(conf) {
@@ -219,7 +231,30 @@
     }
 
     function saveSessions() {
-      localStorage.setItem('classifier_sessions', JSON.stringify(sessions));
+      if (currentMode === 'classifier') {
+        localStorage.setItem('classifier_sessions', JSON.stringify(classifierSessions));
+      } else {
+        localStorage.setItem('chatbot_sessions', JSON.stringify(chatbotSessions));
+      }
+    }
+
+    function setMode(mode) {
+      if (mode === currentMode) return;
+      currentMode = mode;
+      sessions = mode === 'classifier' ? classifierSessions : chatbotSessions;
+      
+      document.getElementById('mode-classifier-btn').className = `px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${mode === 'classifier' ? 'bg-blue-600 shadow-md text-white' : 'text-gray-400 hover:text-white'}`;
+      document.getElementById('mode-chatbot-btn').className = `px-3 md:px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${mode === 'chatbot' ? 'bg-purple-600 shadow-md text-white' : 'text-gray-400 hover:text-white'}`;
+      
+      document.getElementById('empty-title').innerText = mode === 'classifier' ? 'Analyze Anything.' : 'Chat with Gemma 3.';
+      document.getElementById('empty-desc').innerText = mode === 'classifier' 
+        ? 'Paste your text below. Our neural classifier will categorize it into business, tech, or science topics with real-time confidence mapping.' 
+        : 'Have a conversation with the ultra-smart Gemma 3 4B cloud model integrated via Ollama.';
+        
+      document.getElementById('empty-hints').style.display = mode === 'classifier' ? 'grid' : 'none';
+      
+      if (sessions.length > 0) loadSession(sessions[0].id);
+      else createNewChat();
     }
 
     function createNewChat() {
@@ -301,9 +336,10 @@
                   <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
                     <i data-lucide="bot" class="w-4 h-4 text-blue-400"></i>
                   </div>
-                  <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Neural Analysis Complete</span>
+                  <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${currentMode === 'classifier' ? 'Neural Analysis Complete' : 'Gemma 3:4b'}</span>
                 </div>
                 <div class="space-y-4">
+                  ${currentMode === 'classifier' ? `
                   <div class="flex items-baseline gap-2 flex-wrap">
                     <span class="text-sm text-gray-400">Topic Identified:</span>
                     <span class="text-2xl font-bold text-white tracking-tight">${m.text}</span>
@@ -311,6 +347,11 @@
                   <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${ui.class}">
                     ${ui.text}
                   </div>
+                  ` : `
+                  <div class="prose prose-invert prose-sm max-w-none text-gray-200">
+                    ${marked.parse(m.text)}
+                  </div>
+                  `}
                 </div>
               </div>
               <span class="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-2">Generated by Classifier v2.0</span>
@@ -344,28 +385,53 @@
       sendBtn.disabled = true;
 
       // Add thinking...
-      session.messages.push({ role: "bot", text: "Analyzing semantic patterns...", conf: null });
+      session.messages.push({ role: "bot", text: currentMode === 'classifier' ? "Analyzing semantic patterns..." : "Thinking...", conf: null });
       renderChat();
 
       try {
-        const res = await fetch(apiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: val }),
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || errData.error || `Server Error (${res.status})`);
-        }
+        if (currentMode === 'classifier') {
+          const res = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: val }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || errData.error || `Server Error (${res.status})`);
+          }
 
-        const data = await res.json();
-        
-        session.messages.pop(); 
-        session.messages.push({
-          role: "bot",
-          text: data.topic || "Unknown Topic",
-          conf: data.confidence !== undefined ? data.confidence : "N/A",
-        });
+          const data = await res.json();
+          session.messages.pop(); 
+          session.messages.push({
+            role: "bot",
+            text: data.topic || "Unknown Topic",
+            conf: data.confidence !== undefined ? data.confidence : "N/A",
+          });
+        } else {
+          // Prepare history for Chatbot
+          const historyToSend = session.messages.slice(0, -1).map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant', 
+            content: m.text
+          }));
+          
+          const res = await fetch(chatbotApiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: historyToSend }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || errData.error || `Server Error (${res.status})`);
+          }
+
+          const data = await res.json();
+          session.messages.pop(); 
+          session.messages.push({
+            role: "bot",
+            text: data.response || "No response received.",
+            conf: null,
+          });
+        }
         
         saveSessions();
         renderChat();
