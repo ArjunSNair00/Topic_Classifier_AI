@@ -683,6 +683,9 @@
             fullText = `[Attached Document Content]:\n${attachedFileText}\n\n[User Instruction]:\n${val}`;
           }
 
+          // Update the session's temporary message to include attachment context for the API
+          const messageForApi = { role: "user", text: fullText };
+
           const jackiePrompt = `You are Sagar Alias Jackie, the iconic Malayalam movie character. You are a mass underworld don with style, confidence, and a unique way of speaking. Use movie quotes like "Money is always an issue", "Nee Dubai kanditundo?", "Dubai!", "Jackie Machaan!", and have a "mass" attitude. Your tone is funny, sarcastic, and slightly dangerous but helpful. Respond in English with a touch of Kerala underworld vibe. Never break character. Always address the user as a 'Customer'.`;
           const normalPrompt = `You are a professional, helpful, and concise AI assistant. Provide accurate, serious, and quick responses to the user's queries. Maintain a polite and professional tone at all times.`;
           
@@ -690,10 +693,11 @@
           
           const historyToSend = [
             { role: 'system', content: systemPrompt },
-            ...session.messages.slice(0, -1).map(m => ({
+            ...session.messages.slice(0, -2).map(m => ({
               role: m.role === 'user' ? 'user' : 'assistant', 
               content: m.text
-            }))
+            })),
+            { role: 'user', content: fullText }
           ];
           
           const res = await fetch(chatbotApiUrl, {
