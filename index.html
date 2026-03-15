@@ -353,20 +353,29 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: val }),
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || errData.error || `Server Error (${res.status})`);
+        }
+
         const data = await res.json();
         
         session.messages.pop(); 
         session.messages.push({
           role: "bot",
-          text: data.topic,
-          conf: data.confidence,
+          text: data.topic || "Unknown Topic",
+          conf: data.confidence !== undefined ? data.confidence : "N/A",
         });
         
         saveSessions();
         renderChat();
       } catch (err) {
         session.messages.pop();
-        session.messages.push({ role: "bot", text: "Target server unreachable. Ensure python backend is running.", conf: null });
+        session.messages.push({ 
+          role: "bot", 
+          text: `⚠️ Analysis Failed: ${err.message}`, 
+          conf: null 
+        });
         saveSessions();
         renderChat();
       }
